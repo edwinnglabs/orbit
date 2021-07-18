@@ -40,7 +40,6 @@ def get_compiled_stan_model(stan_model_name):
     """
     Load compiled Stan model
     """
-
     compile_stan_model(stan_model_name)
 
     model_file = pkg_resources.resource_filename(

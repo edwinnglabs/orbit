@@ -7,24 +7,13 @@ class ModelTemplate(object):
     -----
     contain data structure ; specify what need to fill from abstract to turn a model concrete
     """
-    def __init__(self, response_col='y', date_col='ds', **kwargs):
-        # general fields passed into Base Template
-        self.response_col = response_col
-        self.date_col = date_col
+    # class attributes
+    _data_input_mapper = None
+    _model_name = None
+    _fitter = None
+    _supported_estimator_types = None
 
-        # basic response fields
-        # mainly set by ._set_training_df_meta() and ._set_dynamic_attributes()
-        self.response = None
-        self.date_array = None
-        self.num_of_observations = None
-        self.training_start = None
-        self.training_end = None
-        self._model_data_input = None
-
-        # basic estimator fields
-        self.estimator_type = estimator_type
-        self.estimator = self.estimator_type(**kwargs)
-        self.with_mcmc = None
+    def __init__(self, **kwargs):
         # set by ._set_init_values
         # this is ONLY used by stan which by default used 'random'
         self._init_values = None
@@ -32,6 +21,31 @@ class ModelTemplate(object):
         # set by _set_model_param_names()
         self._model_param_names = list()
 
-    def predict(self, posterior_estimates, df, include_error=False, **kwargs):
+    def predict(self, posterior_estimates, df, training_meta, prediction_meta, include_error=False, **kwargs):
         """Predict interface for users"""
         raise AbstractMethodException("Abstract method.  Model should implement concrete .predict().")
+
+    def set_init_values(self):
+        """Optional; set init as a callable (for Stan ONLY)
+        See: https://pystan.readthedocs.io/en/latest/api.htm
+        """
+        pass
+
+    def get_init_values(self):
+        return self._init_values
+
+    def get_model_param_names(self):
+        return self._model_param_names
+
+    def get_data_input_mapper(self):
+        return self._data_input_mapper
+
+    def get_model_name(self):
+        return self._model_name
+
+    def get_fitter(self):
+        return self._fitter
+
+    def get_supported_estimator_types(self):
+        return self._supported_estimator_types
+

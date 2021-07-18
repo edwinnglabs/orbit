@@ -4,22 +4,13 @@ import torch
 
 from ..constants import ets as constants
 from ..constants.constants import PredictionKeys
+from ..estimators.stan_estimator import StanEstimatorMCMC, StanEstimatorMAP, StanEstimatorVI
 from ..exceptions import IllegalArgument
-from .model_template import ModelTemplate
+from ..initializer.ets import ETSInitializer
+from .template import BaseTemplate, FullBayesianTemplate, AggregatedPosteriorTemplate, MAPTemplate
 
 
-class ETSInitializer(object):
-    def __init__(self, s):
-        self.s = s
-
-    def __call__(self):
-        init_values = dict()
-        init_sea = np.clip(np.random.normal(loc=0, scale=0.05, size=self.s - 1), -1.0, 1.0)
-        init_values[constants.LatentSamplingParameters.INITIAL_SEASONALITY.value] = init_sea
-        return init_values
-
-
-class ETSModel(ModelTemplate):
+class BaseETS(BaseTemplate):
     """
     Parameters
     ----------
@@ -55,8 +46,6 @@ class ETSModel(ModelTemplate):
         self._seasonality = self.seasonality
         self._seasonality_sm_input = self.seasonality_sm_input
         self._level_sm_input = self.level_sm_input
-        self._set_static_attributes()
-        self._set_model_param_names()
 
     def _set_static_attributes(self):
         """Override function from Base Template"""
@@ -71,7 +60,7 @@ class ETSModel(ModelTemplate):
         if self.seasonality is None:
             self._seasonality = -1
 
-    def set_init_values(self):
+    def _set_init_values(self):
         """Override function from Base Template
         """
         # init_values_partial = partial(init_values_callable, seasonality=seasonality)
@@ -94,14 +83,14 @@ class ETSModel(ModelTemplate):
         if self._seasonality > 1:
             self._model_param_names += [param.value for param in constants.SeasonalitySamplingParameters]
 
-    def predict(self, posterior_estimates, df, training_meta, prediction_meta, include_error=False, **kwargs):
+    def _predict(self, posterior_estimates, df, include_error=False, **kwargs):
         """Vectorized version of prediction math"""
         ################################################################
         # Prediction Attributes
         ################################################################
-        n_forecast_steps = prediction_meta['n_forecast_steps']
-        start = prediction_meta['start']
-        trained_len = training_meta['num_of_observations']
+        n_forecast_steps = self.prediction_input_meta['n_forecast_steps']
+        start = self.prediction_input_meta['start']
+        trained_len = self.num_of_observations
         full_len = trained_len + n_forecast_steps
 
         ################################################################
@@ -231,3 +220,33 @@ class ETSModel(ModelTemplate):
 
         return out
 
+
+class ETSMAP(MAPTemplate, BaseETS):
+    """Concrete ETS model for MAP (Maximum a Posteriori) prediction
+
+    Similar to `ETSAggregated` but prediction is based on Maximum a Posteriori (aka Mode)
+    of the posterior.
+
+    This model only supports MAP estimating `estimator_type`s
+
+    """
+    _supported_estimator_types = [StanEstimatorMAP]
+
+    def __init__(self, estimator_type=StanEstimatorMAP, **kwargs):
+        super().__init__(estimator_type=estimator_type, **kwargs)
+
+
+class ETSFull(FullBayesianTemplate, BaseETS):
+    """Concrete ETS model for full Bayesian prediction"""
+    _supported_estimator_types = [StanEstimatorMCMC, StanEstimatorVI]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+
+class ETSAggregated(AggregatedPosteriorTemplate, BaseETS):
+    """Concrete ETS model for aggregated posterior prediction"""
+    _supported_estimator_types = [StanEstimatorMCMC, StanEstimatorVI]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
