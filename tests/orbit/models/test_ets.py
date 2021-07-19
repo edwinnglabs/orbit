@@ -2,10 +2,10 @@ import pytest
 import numpy as np
 from copy import copy
 
-from orbit.estimators.stan_estimator import StanEstimatorMCMC, StanEstimatorVI, StanEstimatorMAP
+from orbit.estimators.stan_estimator import StanEstimatorMCMC, StanEstimatorMAP
 from orbit.models.ets import ETSMAP, ETSFull, ETSAggregated
 from orbit.constants.constants import PredictionKeys
-from orbit.initializer.ets import ETSInitializer
+from orbit.models.ets import ETSInitializer
 
 
 @pytest.mark.parametrize("model_class", [ETSMAP, ETSFull, ETSAggregated])
